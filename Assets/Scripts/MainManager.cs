@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -12,20 +15,23 @@ public class MainManager : MonoBehaviour
 
     public Text ScoreText;
     public GameObject GameOverText;
-    
+    [SerializeField] Text BestScoreText;
+
     private bool m_Started = false;
     private int m_Points;
     
+    private int bestScore;
+    private string bestName;
+
     private bool m_GameOver = false;
 
-    
     // Start is called before the first frame update
     void Start()
     {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
-        
-        int[] pointCountArray = new [] {1,1,2,2,5,5};
+
+        int[] pointCountArray = new[] { 1, 1, 2, 2, 5, 5 };
         for (int i = 0; i < LineCount; ++i)
         {
             for (int x = 0; x < perLine; ++x)
@@ -36,6 +42,7 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        LoadBest();
     }
 
     private void Update()
@@ -45,7 +52,7 @@ public class MainManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 m_Started = true;
-                float randomDirection = Random.Range(-1.0f, 1.0f);
+                float randomDirection = UnityEngine.Random.Range(-1.0f, 1.0f);
                 Vector3 forceDir = new Vector3(randomDirection, 1, 0);
                 forceDir.Normalize();
 
@@ -71,6 +78,44 @@ public class MainManager : MonoBehaviour
     public void GameOver()
     {
         m_GameOver = true;
+        if (m_Points > bestScore) 
+        { 
+            bestScore = m_Points;
+            bestName = SaveName.Instance.name;
+            SaveBest();
+        }
+        BestScoreText.text = "Best Score: " + bestName + ": " + bestScore;
         GameOverText.SetActive(true);
+    }
+
+    [Serializable]
+    class SaveData
+    {
+        public int bestScore;
+        public string bestName;
+    }
+
+    public void SaveBest()
+    {
+        SaveData data = new SaveData();
+        data.bestScore = bestScore;
+        data.bestName = bestName;
+
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadBest()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            bestName = data.bestName;
+            bestScore = data.bestScore;
+        }
+        BestScoreText.text = "Best Score: " + bestName + ": " + bestScore;
     }
 }
